@@ -43,7 +43,7 @@ private:
     static const char END_OF_LINE = '\n';
     static const char KILL_LINE = 11;
     static const char SPECIAL_KEY = 27;
-    static const char BACKSPACE = 127;
+    static const char BACKSPACE = 8;
     static const char TAB = 9;
 
     enum Key
@@ -90,7 +90,7 @@ void InteractiveShell::run(void)
     while ((c = getch())) {
 
         // Uncomment these line and the cout line at the end of this function to view var values
-        //cout << endl << "c:" << ( c > 0 ? (uint) c : (0x100 + (uint)c) );// debug
+         //cout << endl << "c:" << ( c > 0 ? (uint) c : (0x100 + (uint)c) );// debug
 
         if (specialKey) {
             if (c == 91) {
@@ -127,9 +127,6 @@ void InteractiveShell::run(void)
             eraseLine();
             linePos_ = 0;
         }
-        else if (c < 27) { // We don't want any other CTRL+ keys. 
-
-        }
         else if (c == BACKSPACE) {
 
             if (line_.size() == 0 || linePos_ == 0) {
@@ -140,6 +137,9 @@ void InteractiveShell::run(void)
                 linePos_--;
                 adjust = 1;
             }
+        }
+        else if (c < 27) { // We don't want any other CTRL+ keys. 
+
         }
         else {
             if (linePos_ == line_.size()) {
@@ -152,7 +152,7 @@ void InteractiveShell::run(void)
         }
 
         if (c != END_OF_LINE || c != SPECIAL_KEY) {
-            //cout << " | pos:" << linePos_ << " | size:" << line_.size() << endl; // debug
+           // cout << " | pos:" << linePos_ << " | size:" << line_.size() << endl; // debug
         }
         renderLine(adjust);
         adjust = 0;
@@ -181,9 +181,9 @@ bool InteractiveShell::acceptLine()
     cmdHistory_.push_back(line);
     bool ret = checkCommad(line);
     // Print history for debug purposes
-    //    for (uint i = 0; i < cmdHistory_.size(); i++) { // debug
-    //        cout << i << ":" << cmdHistory_[i] << endl;
-    //    }
+        for (uint i = 0; i < cmdHistory_.size(); i++) { // debug
+            cout << i << ":" << cmdHistory_[i] << endl;
+        }
 
     cmdIndex_++;
     popIndex_ = cmdIndex_;
