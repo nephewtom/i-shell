@@ -1,3 +1,2 @@
-bin_PROGRAMS = bin/ishell 
-noinst_HEADERS = 
-ishell_SOURCES = src/ishell.c
+bin_PROGRAMS = ishell 
+ishell_SOURCES = src/ishell.cpp
