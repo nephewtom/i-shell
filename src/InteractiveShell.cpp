@@ -84,13 +84,7 @@ void InteractiveShell::run(void)
 
         }
         else {
-            if (linePos_ == line_.size()) {
-                line_.push_back(c);
-            }
-            else {
-                insertChar(c);
-            }
-            linePos_++;
+            insertChar(c);
         }
 
         if (c != END_OF_LINE || c != SPECIAL_KEY) {
@@ -166,15 +160,21 @@ bool InteractiveShell::checkCommad(string& line)
 
 void InteractiveShell::insertChar(char c)
 {
-    // cout << " { insertChar('" << c << "')"; // debug
-    int size = line_.size();
-    line_.resize(size + 1);
-    for (uint i = size; i > linePos_; i--) {
-        line_[i] = line_[i - 1];
-        // cout << " | l[" << i << "]:" << line_[i]; // debug
+    if (linePos_ == line_.size()) {
+        line_.push_back(c);
     }
-    line_[linePos_] = c;
-    // cout << " | l[0]:" << line_[0] << " }"; // debug
+    else {
+        // cout << " { insertChar('" << c << "')"; // debug
+        int size = line_.size();
+        line_.resize(size + 1);
+        for (uint i = size; i > linePos_; i--) {
+            line_[i] = line_[i - 1];
+            // cout << " | l[" << i << "]:" << line_[i]; // debug
+        }
+        line_[linePos_] = c;
+        // cout << " | l[0]:" << line_[0] << " }"; // debug
+    }
+    linePos_++;
 }
 
 void InteractiveShell::eraseChar()
