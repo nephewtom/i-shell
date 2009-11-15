@@ -14,42 +14,31 @@
 using namespace std;
 using namespace ase;
 
+#define ISHELL_DEBUG(x) if (debug_) { x }
+
 void InteractiveShell::init()
 {
     signal(SIGINT, &signal_handler);
     validCmds_["ls"] = true;
     validCmds_["mkdir"] = true;
     validCmds_["cd"] = true;
-    validCmds_["cd"] = true;
+    validCmds_["kk"] = true;
 }
 
 void InteractiveShell::run(void)
 {
-    char c;
     cout << "ase[" << cmdIndex_ << "]> ";
-    uint adjust = 0;
-    bool specialKey = false;
-    while ((c = getch())) {
 
-        // Uncomment these line and the cout line at the end of this function to view var values
-         //cout << endl << "c:" << ( c > 0 ? (uint) c : (0x100 + (uint)c) );// debug
+    bool noQuit(true);
+    while (noQuit) {
 
-        if (specialKey) {
-            if (c == 91) {
-                handleSpecialKey();
-            }
-            specialKey = false;
-        }
-        else if (c == END_OF_LINE) {
-            bool more = acceptLine();
-            if (!more) {
-                return;
-            }
+        char c = getch();
+
+        if (c == END_OF_LINE) {
+            noQuit = acceptLine();
         }
         else if (c == SPECIAL_KEY) {
-            specialKey = true;
-            // Warning: more characters follow!
-            //handleSpecialKey();
+            handleSpecialKey();
         }
         else if (c == 1) { // CTRL+A
             handleSpecialKey(HOME);
@@ -57,28 +46,15 @@ void InteractiveShell::run(void)
         else if (c == 5) { // CTRL+E
             handleSpecialKey(END);
         }
+        else if (c == BACKSPACE || c == BACKSPACE2) {
+            handleBackSpace();
+        }
         else if (c == TAB) {
-            string line;
-            for (uint i = 0; i < line_.size(); i++) {
-                line.push_back(line_[i]);
-            }
-            checkCommad(line);
+            handleTabKey();
         }
         else if (c == KILL_LINE) { // CTRL+K
-            renderLine(0, false);
-            eraseLine();
+            line_.clear();
             linePos_ = 0;
-        }
-        else if (c == BACKSPACE) {
-
-            if (line_.size() == 0 || linePos_ == 0) {
-                cout << BELL;
-            }
-            else {
-                eraseChar();
-                linePos_--;
-                adjust = 1;
-            }
         }
         else if (c < 27) { // We don't want any other CTRL+ keys.
 
@@ -87,17 +63,16 @@ void InteractiveShell::run(void)
             insertChar(c);
         }
 
-        if (c != END_OF_LINE || c != SPECIAL_KEY) {
-           // cout << " | pos:" << linePos_ << " | size:" << line_.size() << endl; // debug
-        }
-        renderLine(adjust);
-        adjust = 0;
+        ISHELL_DEBUG(cout << endl << "c:" << (c > 0 ? (uint) c : (0x100 + (uint) c));)
+        ISHELL_DEBUG(cout << " | pos:" << linePos_ << " | size:" << line_.size() << endl;)
+
+        renderLine();
     }
 }
 
 bool InteractiveShell::acceptLine()
 {
-    // cout << " | acceptCmd()"; // debug
+    // TODO: Borrar espacios al final, pq "quit" != "quit ", y no deberia...
 
     string line;
     for (uint i = 0; i < line_.size(); i++) {
@@ -105,21 +80,18 @@ bool InteractiveShell::acceptLine()
     }
     line_.clear();
     linePos_ = 0;
-
-    // For debug purposes
-    //    cout << endl << "line:" << line << " | size:" << line.size();
-    //    cout << " | cmdIdx:" << cmdIndex_ << " | rowIdx:" << popIndex_ << endl;
+    cout << endl;
+    
+    ISHELL_DEBUG( cout << endl << "line:" << line << " | size:" << line.size(); )
+    ISHELL_DEBUG( cout << " | cmdIdx:" << cmdIndex_ << " | rowIdx:" << popIndex_ << endl; )
+            
     if (line.empty()) {
         //cout << "Not input" << endl; // debug
         return true;
     }
-
+    
     cmdHistory_.push_back(line);
     bool ret = checkCommad(line);
-    // Print history for debug purposes
-        for (uint i = 0; i < cmdHistory_.size(); i++) { // debug
-            cout << i << ":" << cmdHistory_[i] << endl;
-        }
 
     cmdIndex_++;
     popIndex_ = cmdIndex_;
@@ -129,10 +101,20 @@ bool InteractiveShell::acceptLine()
 
 bool InteractiveShell::checkCommad(string& line)
 {
-    cout << endl;
-
     if (!line.compare("q") || !line.compare("quit")) {
         return false;
+    }
+
+    if (!line.compare("debug_")) {
+        debug_ = !debug_;
+        return true;
+    }
+
+    if (!line.compare("history")) {
+        for (uint i = 0; i < cmdHistory_.size(); i++) {
+            cout << i << ":" << cmdHistory_[i] << endl;
+        }
+        return true;
     }
 
     uint prevIndex(0);
@@ -156,6 +138,26 @@ bool InteractiveShell::checkCommad(string& line)
         cout << "Valid command" << endl;
     }
     return true;
+}
+
+void InteractiveShell::handleTabKey()
+{
+    string line;
+    for (uint i = 0; i < line_.size(); i++) {
+        line.push_back(line_[i]);
+    }
+    checkCommad(line);
+}
+
+void InteractiveShell::handleBackSpace()
+{
+    if (line_.size() == 0 || linePos_ == 0) {
+        cout << BELL;
+    }
+    else {
+        eraseChar();
+        linePos_--;
+    }
 }
 
 void InteractiveShell::insertChar(char c)
@@ -186,17 +188,10 @@ void InteractiveShell::eraseChar()
     line_.resize(size - 1);
 }
 
-void InteractiveShell::renderLine(uint adjust, bool repos)
+void InteractiveShell::renderLine()
 {
-    // cout << "renderLine()" << endl; // debug
-
-    //      "\rase[]> "
-    cout << "\r        ";
-    if (cmdIndex_ > 9) cout << " ";
-    if (cmdIndex_ > 99) cout << " ";
-    if (cmdIndex_ > 999) cout << " ";
-
-    for (uint i = 0; i < line_.size() + adjust; i++) {
+    cout << "\r";
+    for (int i = 0; i < 80; i++) {
         cout << " ";
     }
 
@@ -205,10 +200,8 @@ void InteractiveShell::renderLine(uint adjust, bool repos)
         cout << line_[i];
     }
 
-    if (repos) {
-        for (uint i = line_.size(); i > linePos_; i--) {
-            cout << "\b";
-        }
+    for (uint i = line_.size(); i > linePos_; i--) {
+        cout << "\b";
     }
 }
 
@@ -223,7 +216,7 @@ void InteractiveShell::handleSpecialKey(Key key)
             cout << BELL;
             return;
         }
-        eraseLine();
+        line_.clear();
         popIndex_--;
         popLine();
         break;
@@ -233,7 +226,7 @@ void InteractiveShell::handleSpecialKey(Key key)
             cout << BELL;
             return;
         }
-        eraseLine();
+        line_.clear();
         popIndex_++;
         popLine();
         break;
@@ -299,15 +292,18 @@ void InteractiveShell::handleSpecialKey(Key key)
 InteractiveShell::Key InteractiveShell::getKeyCode()
 {
     char sc[3];
-    memset(sc,0,3);
+    memset(sc, 0, 3);
 
     // Check: http://bytes.com/topic/python/answers/502625-detecting-key-presses
     // for a list of decoded keypress
-    sc[0] = 91;
-    sc[1] = getch();
+    sc[0] = getch();
+    if (sc[0] != 91) {
+        return OTHER;
+    }
 
-    if ( (sc[1] >= 49 && sc[1] <= 54) || sc[1] == 91) {
-          sc[2] = getch();
+    sc[1] = getch();
+    if ((sc[1] >= 49 && sc[1] <= 54) || sc[1] == 91) {
+        sc[2] = getch();
     }
 
     //cout << "-s0:" << (int)sc[0] <<"-s1:" << (int)sc[1]; // debug
@@ -344,14 +340,6 @@ InteractiveShell::Key InteractiveShell::getKeyCode()
     else return OTHER;
 }
 
-void InteractiveShell::eraseLine()
-{
-    for (uint i = 0; i < line_.size(); i++) {
-        cout << "\b \b";
-    }
-    line_.clear();
-}
-
 void InteractiveShell::popLine()
 {
     string line = cmdHistory_[popIndex_];
@@ -364,10 +352,8 @@ void InteractiveShell::popLine()
 
 int InteractiveShell::getch(void)
 {
-    /*
-     * From:
+    /* From:
         http://www.cplusplus.com/forum/beginner/14136/
-         and
         http://www.anthonycargile.com/blog/?p=129
      */
     int c = 0;
