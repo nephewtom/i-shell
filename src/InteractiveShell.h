@@ -20,7 +20,7 @@ class InteractiveShell
 {
 public:
 
-    InteractiveShell() : linePos_(0), cmdIndex_(0), popIndex_(0), pageStep_(5)
+    InteractiveShell() : linePos_(0), cmdIndex_(0), popIndex_(0), pageStep_(5), debug_(false)
     {
     }
 
@@ -39,11 +39,14 @@ private:
     uint popIndex_; // Index of popped command from history
     uint pageStep_;
 
+    bool debug_; // Internal debug purposes
+
     static const char BELL = '\07';
     static const char END_OF_LINE = '\n';
     static const char KILL_LINE = 11;
     static const char SPECIAL_KEY = 27;
     static const char BACKSPACE = 8;
+    static const char BACKSPACE2 = 127;
     static const char TAB = 9;
 
     enum Key
@@ -53,15 +56,17 @@ private:
 
     int getch();
     bool acceptLine(); // Accept line after hitting RETURN/INTRO key
-    void handleSpecialKey(Key key = OTHER); // Like Arrows, Home, PgUp, PgDw, etc..
+    bool checkCommad(string& line);
+    
+    void handleTabKey();
+    void handleBackSpace();
     void insertChar(char c);
     void eraseChar();
-    void renderLine(uint adjust, bool repos = true);
-    void eraseLine();
-    void popLine();
-    Key getKeyCode();
+    void renderLine();
 
-    bool checkCommad(string& line);
+    void handleSpecialKey(Key key = OTHER); // Like Arrows, Home, PgUp, PgDw, etc..
+    Key getKeyCode();
+    void popLine();
 
     static void signal_handler(int signal)
     {
