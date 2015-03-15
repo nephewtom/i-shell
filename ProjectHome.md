@@ -1,0 +1,1 @@
+Small sample of an interactive shell in C++ tested on Linux.
